@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<section name="Workbench">
+	<section name="org.eclipse.ui.texteditor.FindReplaceDialog">
+		<item value="false" key="isRegEx"/>
+		<item value="INVALID" key="selection"/>
+		<item value="false" key="casesensitive"/>
+		<item value="false" key="incremental"/>
+		<item value="true" key="wrap"/>
+		<item value="false" key="wholeword"/>
+		<list key="findhistory">
+			<item value="invalid"/>
+			<item value="invalid parameters"/>
+			<item value="400"/>
+			<item value="validLog_App_User_Company"/>
+			<item value="Invalid AUTH LOG detected"/>
+			<item value="semployno"/>
+			<item value="semployid"/>
+			<item value="$_envirment"/>
+			<item value="$userid"/>
+			<item value="getnex"/>
+			<item value="csendstat"/>
+			<item value="$createxxx"/>
+			<item value="$timestmp"/>
+			<item value="document"/>
+			<item value="$jsondata"/>
+		</list>
+		<list key="replacehistory">
+			<item value="$_refernox"/>
+			<item value="$_refercde"/>
+			<item value=".popup"/>
+			<item value=".btn1"/>
+			<item value=".btn2"/>
+			<item value=".btn"/>
+			<item value="btns"/>
+			<item value=".btn2-mc"/>
+			<item value=".btn1-mc"/>
+			<item value=".btns-mc"/>
+			<item value="popup-mc"/>
+			<item value="This serves as your SALES INVOICE."/>
+			<item value="Hotline_Outgoing_OTP"/>
+			<item value="localhost"/>
+			<item value="192.168.10.240"/>
+		</list>
+	</section>
+	<section name="org.eclipse.ui.texteditor.FindReplaceDialog_dialogBounds">
+		<item value="284" key="DIALOG_WIDTH"/>
+		<item value="1|Segoe UI|9.0|0|WINDOWS|1|-12|0|0|0|400|0|0|0|1|0|0|0|0|Segoe UI" key="DIALOG_FONT_NAME"/>
+		<item value="391" key="DIALOG_HEIGHT"/>
+		<item value="115" key="DIALOG_X_ORIGIN"/>
+		<item value="254" key="DIALOG_Y_ORIGIN"/>
+	</section>
+</section>

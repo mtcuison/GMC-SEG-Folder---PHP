@@ -1,0 +1,540 @@
+<?php
+require_once 'rawprint.php';
+require __DIR__ . '/../vendor/autoload.php';
+use Mike42\Escpos\Printer;
+use Mike42\Escpos\PrintConnectors\WindowsPrintConnector;
+
+$json = array();
+
+//$data = file_get_contents('php://input');
+$data = '{"Master":{"nTranTotl":5000.00,"sClientNm":"Cuison, Michael Torres","sTerminal":"001","sAddressx":"","nDiscount":0.10,"nAddDiscx":100.00,"sBusStyle":"","nFreightx":100.00,"sTINumber":"","sInvoicex":"00000001","nVATRatex":1.12,"sCashierx":"Cuison, Michael Torres","sDateTime":2019-11-25 10:21:09.0},"Payment":{"sCheckPay":[],"sCredtCrd":[],"sGiftCert":[],"nCashAmtx":6000.00},"Header":{"sBranchNm":"GMC Dagupan - Honda","sCompnyNm":"Guanzon Merchandising Corporation","sSlipType":"SI","cReprintx":"0","sAddress1":"Guanzon Bldg., Perez Blvd.,","sAddress2":"Dagupan City, Pangasinan 2400","sMINumber":"XXXXXXXXXXXXXXXXX","sSerialNo":"XXXXXXXXXX","sVATREGTN":"XXX-XXX-XXX-XXXX"},"Footer":{"sPTUExpry":"XXXX-XX-XX","sPTUIssdx":"XXXX-XX-XX","sAccrIssd":"XXXX-XX-XX","sPTUNmber":"XXXXXXXXXXXXXXXXXXXXXX","sAddress1":"021 Pogo grande","sAddress2":"Dagupan City, Pangasinan 2400","sDevelopr":"RMJ Business Solutions","sVATREGTN":"942-188-655-00000","sAccrNmbr":"XXXXXXXXXXXXXXXXXXXXXX","sAccdExpr":"XXXX-XX-XX"},"Detail":[{"nQuantity":5,"nDiscount":0.00,"sDescript":"sdfsdafasdfasdfasd","nAddDiscx":0.00,"cVatablex":"1","cSerialzd":"","sSerialNo":"","sBarCodex":"1231231231","nAmountxx":1000.00},{"nQuantity":10,"nDiscount":0.00,"sDescript":"A1 Sauce (437ml)","nAddDiscx":0.00,"cVatablex":"1","cSerialzd":"","sSerialNo":"","sBarCodex":"190000000003","nAmountxx":0.00}]}';
+echo $data;
+$parjson = json_decode($data, true);
+
+if(is_null($parjson)){
+    $json["result"] = "error";
+    $json["error"]["message"] = "Invalid parameters detected...";
+    echo json_encode($json);
+    return false;
+}
+
+$jsonHeader = null;
+$jsonMaster = null;
+$jsonDetail = null;
+$jsonFooter = null;
+$jsonPaymnt = null;
+
+foreach ($parjson as $key => $value){
+    switch (strtolower($key)){
+        case "header":
+            $jsonHeader = $value; break;
+        case "master";
+            $jsonMaster = $value; break;
+        case "detail";
+            $jsonDetail = $value; break;
+        case "payment":
+            $jsonPaymnt = $value; break;
+        case "footer";
+            $jsonFooter = $value;
+    }
+}
+
+if ($jsonHeader == null){
+    $json["result"] = "error";
+    $json["error"]["message"] = "Header parameter is invalid.";
+    echo json_encode($json);
+    return false;
+}
+
+if ($jsonFooter == null){
+    $json["result"] = "error";
+    $json["error"]["message"] = "Footer parameter is invalid.";
+    echo json_encode($json);
+    return false;
+}
+
+if ($jsonMaster == null){
+    $json["result"] = "error";
+    $json["error"]["message"] = "Master parameter is invalid.";
+    echo json_encode($json);
+    return false;
+}
+
+if ($jsonDetail == null){
+    $json["result"] = "error";
+    $json["error"]["message"] = "Detail parameter is invalid.";
+    echo json_encode($json);
+    return false;
+}
+
+if ($jsonPaymnt == null){
+    $json["result"] = "error";
+    $json["error"]["message"] = "Payment parameter is invalid.";
+    echo json_encode($json);
+    return false;
+}
+
+if ((strtolower($jsonHeader["sSlipType"]) == "or" || 
+    strtolower($jsonHeader["sSlipType"]) == "si") == false){
+        $json["result"] = "error";
+        $json["error"]["message"] = "Invoice type is not suitable for this API.";
+        echo json_encode($json);
+        return false;
+}
+
+$connector = new WindowsPrintConnector("EPSON TM-U220 Receipt");
+$printer = new Printer($connector);
+
+/* Initialize */
+$printer -> initialize();
+
+//default text formatting (REGULAR)
+$printer -> setFont(Printer::FONT_C);
+$printer -> selectPrintMode($printer::MODE_FONT_B);
+$printer -> setEmphasis(false);
+
+//print header
+printHeader($printer, $jsonHeader);
+
+//print detail
+printDetail($printer, $jsonMaster, $jsonDetail, $jsonPaymnt, $jsonHeader["sSlipType"]);
+
+//print footer
+printFooter($printer, $jsonFooter, $jsonHeader["sSlipType"]);
+
+/* Cut */
+$printer -> feed();
+$printer -> cut();
+
+/* Pulse */
+$printer -> pulse();
+
+/* Always close the printer! On some PrintConnectors, no actual
+ * data is sent until the printer is closed. */
+$printer -> close();
+return;
+
+/**
+ * PRINTS HEADER OF THE RECEIPT
+ *
+ * printHeader($printer, $json)
+ *      $printer - printer object
+ *      $json - json object for header details
+ */
+function printHeader($printer, $json){
+    $printer -> setEmphasis(true);
+    $printer -> text(str_pad($json["sCompnyNm"], PrintCharSize::REGULAR, " ", STR_PAD_BOTH));
+    $printer -> text(PrintStr::NEWLINE);
+    
+    $printer -> text(str_pad($json["sBranchNm"], PrintCharSize::REGULAR, " ", STR_PAD_BOTH));
+    $printer -> text(PrintStr::NEWLINE);
+    
+    $printer -> text(str_pad($json["sAddress1"], PrintCharSize::REGULAR, " ", STR_PAD_BOTH));
+    $printer -> text(PrintStr::NEWLINE);
+    
+    $printer -> text(str_pad($json["sAddress2"], PrintCharSize::REGULAR, " ", STR_PAD_BOTH));
+    $printer -> text(PrintStr::NEWLINE);
+    
+    $printer -> text(str_pad("VAT REG TIN: " . $json["sVATREGTN"], PrintCharSize::REGULAR, " ", STR_PAD_BOTH));
+    $printer -> text(PrintStr::NEWLINE);
+    
+    $printer -> text(str_pad("MIN: " . $json["sMINumber"], PrintCharSize::REGULAR, " ", STR_PAD_BOTH));
+    $printer -> text(PrintStr::NEWLINE);
+    
+    $printer -> text(str_pad("Serial No.: " . $json["sSerialNo"], PrintCharSize::REGULAR, " ", STR_PAD_BOTH));
+    $printer -> text(PrintStr::NEWLINE . PrintStr::NEWLINE);
+    
+    $printer -> selectPrintMode($printer::MODE_DOUBLE_HEIGHT);
+    
+    if (strtolower($json["sSlipType"]) == "or")
+        $printer -> text(str_pad("OFFICIAL RECEIPT", PrintCharSize::DDHGHT, " ", STR_PAD_BOTH));
+    else 
+        $printer -> text(str_pad("SALES INVOICE", PrintCharSize::DDHGHT, " ", STR_PAD_BOTH));
+    
+    $printer -> selectPrintMode($printer::MODE_FONT_B);
+    
+    if ($json["cReprintx"] == "1"){
+        $printer -> setEmphasis(true);
+        $printer -> text(PrintStr::NEWLINE);
+        $printer -> text(str_pad("REPRINT", PrintCharSize::REGULAR, " ", STR_PAD_BOTH));
+        $printer -> setEmphasis(false);
+    }
+    
+    $printer -> text(PrintStr::NEWLINE . PrintStr::NEWLINE);
+}
+
+/**
+ * PRINTS DETAIL OF THE RECEIPT
+ *
+ * printDetail($printer, $json)
+ *      $printer - printer object
+ *      $master - json object for master info
+ *      $detail - json object for info info
+ */
+function printDetail($printer, $master, $detail, $payment, $sliptype){
+    $total = 0.00;
+    $nonvat = 0.00;
+    $itemctr = 0;
+    $nonvatctr = 0;
+    
+    $trantotl = $master["nTranTotl"];
+    $discrate = $master["nDiscount"];
+    $adddiscx = $master["nAddDiscx"];
+    $vatratex = $master["nVATRatex"];
+    
+    $printer -> setEmphasis(false);
+    $printer -> text(str_pad(PrintStr::ASTRSKX, PrintCharSize::REGULAR, PrintStr::ASTRSKX, STR_PAD_RIGHT));
+    $printer -> text(PrintStr::NEWLINE);
+    
+    $s4Print = "";
+    $printer -> setEmphasis(false);
+    //Detail Header
+    $s4Print = "QTY" . " "
+                . str_pad("DESCRIPTION", PrintCharSize::DSCLEN, " ", STR_PAD_RIGHT) . " "
+                . str_pad("UPRICE", PrintCharSize::PRCLEN, " ", STR_PAD_LEFT) . " "
+                . str_pad("AMOUNT", PrintCharSize::TTLLEN, " ", STR_PAD_LEFT);
+    $printer -> text($s4Print);
+    $printer -> text(PrintStr::NEWLINE);
+                
+    //Loop Detail Here:
+    foreach($detail as $item){
+        $total = $item["nQuantity"] * $item["nAmountxx"];
+        
+        $s4Print = str_pad($item["nQuantity"], PrintCharSize::QTYLEN, " ", STR_PAD_LEFT) . " "
+                    . str_pad($item["sBarCodex"], PrintCharSize::DSCLEN, " ", STR_PAD_RIGHT) . " "
+                    . str_pad(PrintStr::format_number($item["nAmountxx"], false), PrintCharSize::PRCLEN, " ", STR_PAD_LEFT) . " "
+                    . str_pad(PrintStr::format_number($total, false), PrintCharSize::TTLLEN, " ", STR_PAD_LEFT);
+        
+        //is the item vatable???
+        if ($item["cVatablex"] == "1")
+            $s4Print = $s4Print . "V";
+        else 
+            $nonvatctr += $item["nQuantity"];
+        
+            
+                    
+        //print detail info
+        $printer -> text($s4Print);
+        $printer -> text(PrintStr::NEWLINE);
+        
+        //print item description
+        $printer -> text("    " . $item["sDescript"]);
+        $printer -> text(PrintStr::NEWLINE);
+        
+        //print serial if item was serialized
+        if ($item["cSerialzd"] == "1"){
+            $printer -> text("    " . $item["sSerialNo"]);
+            $printer -> text(PrintStr::NEWLINE);
+        }
+        
+        $itemctr += $item["nQuantity"];
+    }
+    
+    $printer -> text(str_pad(PrintStr::DASHLNE, PrintCharSize::REGULAR, PrintStr::DASHLNE, STR_PAD_RIGHT));
+    $printer -> text(PrintStr::NEWLINE);
+    
+    $printer -> text(" No. of Items: " . $itemctr);
+    $printer -> text(PrintStr::NEWLINE . PrintStr::NEWLINE);
+    
+    //SUB TOTAL
+    $s4Print = str_pad(" Sub-Total", "25", " ", STR_PAD_RIGHT) . " " . str_pad(PrintStr::format_number($trantotl, false), PrintCharSize::REGLEN, " ", STR_PAD_LEFT);
+    $printer -> text($s4Print);
+    $printer -> text(PrintStr::NEWLINE);
+    
+    //small separator
+    $s4Print = str_pad(" ", "25", " ", STR_PAD_RIGHT) . " " . str_pad(PrintStr::DASHLNE, PrintCharSize::REGLEN, PrintStr::DASHLNE, STR_PAD_LEFT);
+    $printer -> text($s4Print);
+    $printer -> text(PrintStr::NEWLINE);
+    
+    $discount = 0.00;
+    $addition = 0.00;
+    $vatexcld = $trantotl/ $vatratex;
+    
+    if ($discrate > 0)
+        $discount = $vatexcld * $discrate;
+    
+    $s4Print = str_pad(" Price Exclusive of VAT", "25", " ", STR_PAD_RIGHT) . " " . str_pad(PrintStr::format_number($vatexcld, false), PrintCharSize::REGLEN, " ", STR_PAD_LEFT);
+    $printer -> text($s4Print);
+    $printer -> text(PrintStr::NEWLINE);
+
+    //DISCOUNT
+    if ($discount > 0) {
+        $discrate = $discrate * 100;
+        
+        $s4Print = str_pad(" Less: " . $discrate . "% Discount", "25", " ", STR_PAD_RIGHT) . " " . str_pad(PrintStr::format_number($discount, false), PrintCharSize::REGLEN, " ", STR_PAD_LEFT);
+        $printer -> text($s4Print);
+        $printer -> text(PrintStr::NEWLINE);
+    }
+    
+    if ($adddiscx > 0) {  
+        $addition = $adddiscx / $vatratex;
+        $s4Print = str_pad(" Less: Discount", "25", " ", STR_PAD_RIGHT) . " " . str_pad(PrintStr::format_number($addition, false), PrintCharSize::REGLEN, " ", STR_PAD_LEFT);
+        $printer -> text($s4Print);
+        $printer -> text(PrintStr::NEWLINE);
+    }
+    
+    //small separator
+    $s4Print = str_pad(" ", "25", " ", STR_PAD_RIGHT) . " " . str_pad(PrintStr::DASHLNE, PrintCharSize::REGLEN, PrintStr::DASHLNE, STR_PAD_LEFT);
+    $printer -> text($s4Print);
+    $printer -> text(PrintStr::NEWLINE);
+    
+    $netWOVAT = $vatexcld - ($discount + $addition);
+    $s4Print = str_pad(" Net Sales (w/o VAT)", "25", " ", STR_PAD_RIGHT) . " " . str_pad(PrintStr::format_number($netWOVAT, false), PrintCharSize::REGLEN, " ", STR_PAD_LEFT);
+    $printer -> text($s4Print);
+    $printer -> text(PrintStr::NEWLINE);
+    
+    $addVATxx = $netWOVAT * ($vatratex - 1);
+    $s4Print = str_pad(" Add: VAT", "25", " ", STR_PAD_RIGHT) . " " . str_pad(PrintStr::format_number($addVATxx, false), PrintCharSize::REGLEN, " ", STR_PAD_LEFT);
+    $printer -> text($s4Print);
+    $printer -> text(PrintStr::NEWLINE);
+    
+    //small separator
+    $s4Print = str_pad(" ", "25", " ", STR_PAD_RIGHT) . " " . str_pad(PrintStr::DASHLNE, PrintCharSize::REGLEN, PrintStr::DASHLNE, STR_PAD_LEFT);
+    $printer -> text($s4Print);
+    $printer -> text(PrintStr::NEWLINE);
+    
+    $printer -> setEmphasis(true);
+    $nettotal = $netWOVAT + $addVATxx;
+    $s4Print = str_pad(" TOTAL AMOUNT DUE :", "25", " ", STR_PAD_RIGHT) . " " . str_pad(PrintStr::format_number($nettotal, false), PrintCharSize::REGLEN, " ", STR_PAD_LEFT);
+    $printer -> text($s4Print);
+    $printer -> text(PrintStr::NEWLINE . PrintStr::NEWLINE);
+    
+    //PAYMENT COMPUTATION
+    $cash = $payment["nCashAmtx"];
+    
+    $card = 0.00;
+    $jsonCard = $payment["sCredtCrd"];
+    foreach($jsonCard as $item){
+        $card += $item["nAmountxx"];
+    }
+    
+    $check = 0.00;
+    $jsonCheck = $payment["sCheckPay"];
+    foreach($jsonCheck as $item){
+        $check += $item["nAmountxx"];
+    }
+    
+    $gc= 0.00;
+    $jsonGC = $payment["sGiftCert"];
+    foreach($jsonGC as $item){
+        $gc += $item["nAmountxx"];
+    }
+    
+    $printer -> setEmphasis(false);
+
+    if ($cash > 0.00){
+        $s4Print = str_pad(" Cash", "25", " ", STR_PAD_RIGHT) . " " . str_pad(PrintStr::format_number($cash, false), PrintCharSize::REGLEN, " ", STR_PAD_LEFT);
+        $printer -> text($s4Print);
+        $printer -> text(PrintStr::NEWLINE);
+    }
+    
+    if ($card > 0.00){
+        $s4Print = str_pad(" Credit Card", "25", " ", STR_PAD_RIGHT) . " " . str_pad(PrintStr::format_number($card, false), PrintCharSize::REGLEN, " ", STR_PAD_LEFT);
+        $printer -> text($s4Print);
+        $printer -> text(PrintStr::NEWLINE);
+    }
+    
+    if ($check > 0.00){
+        $s4Print = str_pad(" Check", "25", " ", STR_PAD_RIGHT) . " " . str_pad(PrintStr::format_number($check, false), PrintCharSize::REGLEN, " ", STR_PAD_LEFT);
+        $printer -> text($s4Print);
+        $printer -> text(PrintStr::NEWLINE);
+    }
+    
+    if ($gc > 0.00){
+        $s4Print = str_pad(" Gift Certificate", "25", " ", STR_PAD_RIGHT) . " " . str_pad(PrintStr::format_number($gc, false), PrintCharSize::REGLEN, " ", STR_PAD_LEFT);
+        $printer -> text($s4Print);
+        $printer -> text(PrintStr::NEWLINE);
+    }
+    
+    $printer -> text(PrintStr::NEWLINE);
+    
+    
+    //CHANGE COMPUTATION
+    //use GC Amount First
+    $change = 0.00;
+    if ($gc > $nettotal){
+        $change = $cash + $card + $check;           
+    } else {
+        $change = ($gc +$cash + $card + $check) - $nettotal;
+    }
+    
+    $s4Print = str_pad(" CHANGE           :", "25", " ", STR_PAD_RIGHT) . " " . str_pad(PrintStr::format_number($change, false), PrintCharSize::REGLEN, " ", STR_PAD_LEFT);
+    $printer -> text($s4Print);
+    $printer -> text(PrintStr::NEWLINE);
+    
+    $printer -> text(str_pad(PrintStr::DASHLNE, PrintCharSize::REGULAR, PrintStr::DASHLNE, STR_PAD_RIGHT));
+    $printer -> text(PrintStr::NEWLINE . PrintStr::NEWLINE);
+    
+    $s4Print = str_pad(" VAT Exempt Sales      ", "25", " ", STR_PAD_RIGHT) . " " . str_pad(PrintStr::format_number($nonvat, false), PrintCharSize::REGLEN, " ", STR_PAD_LEFT);
+    $printer -> text($s4Print);
+    $printer -> text(PrintStr::NEWLINE);
+    
+    $s4Print = str_pad(" Zero-Rated Sales      ", "25", " ", STR_PAD_RIGHT) . " " . str_pad(PrintStr::format_number("0.00", false), PrintCharSize::REGLEN, " ", STR_PAD_LEFT);
+    $printer -> text($s4Print);
+    $printer -> text(PrintStr::NEWLINE);
+    
+    $s4Print = str_pad(" VATable Sales         ", "25", " ", STR_PAD_RIGHT) . " " . str_pad(PrintStr::format_number($netWOVAT, false), PrintCharSize::REGLEN, " ", STR_PAD_LEFT);
+    $printer -> text($s4Print);
+    $printer -> text(PrintStr::NEWLINE);
+    
+    $s4Print = str_pad(" VAT Amount            ", "25", " ", STR_PAD_RIGHT) . " " . str_pad(PrintStr::format_number($addVATxx, false), PrintCharSize::REGLEN, " ", STR_PAD_LEFT);
+    $printer -> text($s4Print);
+    $printer -> text(PrintStr::NEWLINE . PrintStr::NEWLINE);
+    
+    $s4Print = " Cust Name: ". str_pad($master["sClientNm"], 28, " ", STR_PAD_RIGHT); //28
+    $printer -> text($s4Print);
+    $printer -> text(PrintStr::NEWLINE);
+    
+    $s4Print = " Address: ". str_pad($master["sAddressx"], 30, " ", STR_PAD_RIGHT); //30
+    $printer -> text($s4Print);
+    $printer -> text(PrintStr::NEWLINE);
+    
+    $s4Print = " TIN: ". str_pad($master["sTINumber"], 34, " ", STR_PAD_RIGHT); //34
+    $printer -> text($s4Print);
+    $printer -> text(PrintStr::NEWLINE);
+    
+    $s4Print = " Bus. Style: ". str_pad($master["sBusStyle"], 27, " ", STR_PAD_RIGHT); //27
+    $printer -> text($s4Print);
+    $printer -> text(PrintStr::NEWLINE . PrintStr::NEWLINE);
+    
+    $s4Print = " Cashier: " . str_pad($master["sCashierx"], 30, " ", STR_PAD_RIGHT); //30
+    $printer -> text($s4Print);
+    $printer -> text(PrintStr::NEWLINE);
+    
+    $s4Print = " Terminal No.: " . str_pad($master["sTerminal"], 25, " ", STR_PAD_RIGHT); //25
+    $printer -> text($s4Print);
+    $printer -> text(PrintStr::NEWLINE);           
+    
+    if (strtolower($sliptype) == "or"){
+        $s4Print = " OR No.: " . str_pad(strtoupper($sliptype) . "-" .  $master["sInvoicex"], 26, " ", STR_PAD_RIGHT); //31
+    } else {
+        $s4Print = " SI No.: " . str_pad(strtoupper($sliptype) . "-" .  $master["sInvoicex"], 26, " ", STR_PAD_RIGHT); //31
+    }
+    $printer -> text($s4Print);
+    $printer -> text(PrintStr::NEWLINE);
+    
+    
+    $s4Print = " Date/Time: " . str_pad($master["sDateTime"], 28, " ", STR_PAD_RIGHT); //28
+    $printer -> text($s4Print);
+    $printer -> text(PrintStr::NEWLINE);
+    
+    //if payment has card or check or gc, display the details 
+    if ($card + $check + $gc > 0.00){
+        $printer -> text(str_pad(PrintStr::DASHLNE, PrintCharSize::REGULAR, PrintStr::DASHLNE, STR_PAD_RIGHT));
+        $printer -> text(PrintStr::NEWLINE);
+        
+        if ($card > 0.00){
+            $printer -> text(PrintStr::NEWLINE);
+            
+            $s4Print = " Credit Card(s): ";
+            $printer -> text($s4Print);
+            $printer -> text(PrintStr::NEWLINE);
+            
+            foreach($jsonCard as $item){
+                $s4Print = str_pad(" " . $item["sBankCode"], "25", " ", STR_PAD_RIGHT) . " " . str_pad(PrintStr::format_number($item["nAmountxx"], false), PrintCharSize::REGLEN, " ", STR_PAD_LEFT);
+                $printer -> text($s4Print);
+                $printer -> text(PrintStr::NEWLINE);
+                
+                $s4Print = " Card No. : " . str_pad(substr($item["sCardNoxx"], strlen($item["sCardNoxx"]) - 4), strlen($item["sCardNoxx"]), "*", STR_PAD_LEFT);
+                $printer -> text($s4Print);
+                $printer -> text(PrintStr::NEWLINE);
+            }
+        }
+        
+        if ($check > 0.00){
+            $printer -> text(PrintStr::NEWLINE);
+            
+            $s4Print = " Check(s): ";
+            $printer -> text($s4Print);
+            $printer -> text(PrintStr::NEWLINE);
+            
+            foreach($jsonCheck as $item){
+                $s4Print = str_pad(" " . $item["sBankCode"], "25", " ", STR_PAD_RIGHT) . " " . str_pad(PrintStr::format_number($item["nAmountxx"], false), PrintCharSize::REGLEN, " ", STR_PAD_LEFT);
+                $printer -> text($s4Print);
+                $printer -> text(PrintStr::NEWLINE);
+                
+                $s4Print = " Check No. : " . $item["sCheckNox"];
+                $printer -> text($s4Print);
+                $printer -> text(PrintStr::NEWLINE);
+            }
+        }
+        
+        if ($gc > 0.00){
+            $printer -> text(PrintStr::NEWLINE);
+            
+            $s4Print = " Gift Certificate(s): ";
+            $printer -> text($s4Print);
+            $printer -> text(PrintStr::NEWLINE);
+            
+            foreach($jsonGC as $item){
+                $s4Print = str_pad(" " . $item["sCompnyCd"], "25", " ", STR_PAD_RIGHT) . " " . str_pad(PrintStr::format_number($item["nAmountxx"], false), PrintCharSize::REGLEN, " ", STR_PAD_LEFT);
+                $printer -> text($s4Print);
+                $printer -> text(PrintStr::NEWLINE);
+                
+                $s4Print = " Reference No. : " . $item["sReferNox"];
+                $printer -> text($s4Print);
+                $printer -> text(PrintStr::NEWLINE);
+            }
+        }
+    }
+}
+
+/**
+ * PRINTS FOOTER OF THE RECEIPT
+ * 
+ * printFooter($printer, $json)
+ *      $printer - printer object
+ *      $json - json object for footer details
+ *      $sliptype - slip type
+ */
+function printFooter($printer, $json, $sliptype){
+    //START : PRINT HEADER
+    $printer -> setEmphasis(false);
+    $printer -> text(str_pad(PrintStr::ASTRSKX, PrintCharSize::REGULAR, PrintStr::ASTRSKX, STR_PAD_RIGHT));
+    $printer -> text(PrintStr::NEWLINE . PrintStr::NEWLINE);
+    
+    $printer -> setEmphasis(true);
+    if (strtolower($sliptype) == "or")
+        $printer -> text(str_pad("This serves as an OFFICIAL RECEIPT.", PrintCharSize::REGULAR, " ", STR_PAD_BOTH));
+    else
+        $printer -> text(str_pad("This is your SALES INVOICE.", PrintCharSize::REGULAR, " ", STR_PAD_BOTH));
+    
+    $printer -> text(PrintStr::NEWLINE);
+    
+    $printer -> setEmphasis(false);
+    $printer -> text(str_pad("Thank you, and please come again.", PrintCharSize::REGULAR, " ", STR_PAD_BOTH));
+    $printer -> text(PrintStr::NEWLINE . PrintStr::NEWLINE);
+    
+    $printer -> text(str_pad($json["sDevelopr"], PrintCharSize::REGULAR, " ", STR_PAD_BOTH));
+    $printer -> text(PrintStr::NEWLINE);
+    $printer -> text(str_pad($json["sAddress1"], PrintCharSize::REGULAR, " ", STR_PAD_BOTH));
+    $printer -> text(PrintStr::NEWLINE);
+    $printer -> text(str_pad($json["sAddress2"], PrintCharSize::REGULAR, " ", STR_PAD_BOTH));
+    $printer -> text(PrintStr::NEWLINE);
+    $printer -> text(str_pad("VAT REG TIN: " . $json["sVATREGTN"], PrintCharSize::REGULAR, " ", STR_PAD_BOTH));
+    $printer -> text(PrintStr::NEWLINE);
+    $printer -> text(str_pad("ACCR NO.: " . $json["sAccrNmbr"], PrintCharSize::REGULAR, " ", STR_PAD_BOTH));
+    $printer -> text(PrintStr::NEWLINE);
+    $printer -> text(str_pad("Date Issued: " . $json["sAccrIssd"], PrintCharSize::REGULAR, " ", STR_PAD_BOTH));
+    $printer -> text(PrintStr::NEWLINE);
+    $printer -> text(str_pad("Valid Until: " . $json["sAccdExpr"], PrintCharSize::REGULAR, " ", STR_PAD_BOTH));
+    $printer -> text(PrintStr::NEWLINE);
+    $printer -> text(str_pad("PTU NO.: " . $json["sPTUNmber"], PrintCharSize::REGULAR, " ", STR_PAD_BOTH));
+    $printer -> text(PrintStr::NEWLINE);
+    $printer -> text(str_pad("Date Issued: " . $json["sPTUIssdx"], PrintCharSize::REGULAR, " ", STR_PAD_BOTH));
+    $printer -> text(PrintStr::NEWLINE);
+    $printer -> text(str_pad("Valid Until: " . $json["sPTUExpry"], PrintCharSize::REGULAR, " ", STR_PAD_BOTH));
+    $printer -> text(PrintStr::NEWLINE . PrintStr::NEWLINE);
+    
+    $printer -> setEmphasis(true);
+    if (strtolower($sliptype) == "or"){
+        $printer -> text(str_pad("THIS RECEIPT SHALL BE VALID", PrintCharSize::REGULAR, " ", STR_PAD_BOTH));
+    } else
+        $printer -> text(str_pad("THIS INVOICE SHALL BE VALID", PrintCharSize::REGULAR, " ", STR_PAD_BOTH));
+    
+    $printer -> text(PrintStr::NEWLINE);
+    $printer -> text(str_pad("FOR FIVE(5) YEARS FROM THE DATE OF", PrintCharSize::REGULAR, " ", STR_PAD_BOTH));
+    $printer -> text(PrintStr::NEWLINE);
+    $printer -> text(str_pad("THE PERMT TO USE.", PrintCharSize::REGULAR, " ", STR_PAD_BOTH));
+    //END : PRINT HEADER
+}

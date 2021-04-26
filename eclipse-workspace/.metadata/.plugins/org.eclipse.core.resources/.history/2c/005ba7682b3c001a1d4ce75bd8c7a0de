@@ -1,0 +1,79 @@
+<?php
+require_once 'config.php';
+require_once APPPATH.'/core/Nautilus.php';
+require_once APPPATH.'/core/WSHeaderValidatorFactory.php';
+require_once 'MySQLAES.php';
+
+$sql = CommonUtil::Hex2String("5461F165646F2C204D69636861656C20416C69");
+echo $sql;
+
+//$userid = "GAP019000001";
+//$serialx = CommonUtil::SerializeNumber(substr($userid, 4));
+//echo $serialx; 
+
+/*
+if(!CommonUtil::isValidMobile("09260375777")){
+    echo "mali";
+    return;
+} 
+echo "tama";*/
+
+//echo CommonUtil::isValidMobile(CommonUtil::fixMobile("639260375777"));
+
+/*$emailadd = htmlspecialchars("adrabanal.85@gmail.com");
+$username = htmlspecialchars("Rabanal, Aerwyn D");
+$password = htmlspecialchars("UTNYTzJhSEpWdHl6aTJXbHFNY1pOdz09");
+$salt = htmlspecialchars("070cc75478b0525ba1443a6ca002b708a0df9cb581ad76e7c7ec7a8ec91a2afe");
+
+$password = CommonUtil::app_decrypt($password, $salt);
+
+echo $password;*/
+
+/*
+$sMobileNo = "09260375777";
+echo fixMobile($sMobileNo);
+return;
+
+function fixMobile($sMobileNo){
+    
+    if (strlen($sMobileNo) == 11){
+        if (substr($sMobileNo, 0, 1) == "0")
+            return "+63" . substr($sMobileNo, 1, 10);
+        else return "";
+    } else if (strlen($sMobileNo) == 10){
+        if (substr($sMobileNo, 0, 1) == "9")
+            return "+63" . $sMobileNo;
+        else return "";
+    } else if (strlen($sMobileNo) < 10){
+        return "";
+    } else if (strlen($sMobileNo) == 12){
+        if (substr($sMobileNo, 0, 2) == "63")
+            return "+" . $sMobileNo;
+        else return "";
+    } else if (strlen($sMobileNo) == 13){
+        if (substr($sMobileNo, 0, 3) == "+63")
+            return $sMobileNo;
+        else return "";
+    } else {
+        return "";
+    }
+    
+}
+
+
+
+$sMobileNo = "09260375777";
+$sMobileNo = str_replace("+63", "0", $sMobileNo);
+$prefix = substr($sMobileNo, 0, 3);
+$globe = "0817»0905»0906»0915»0916»0917»0926»0927»0935»0936»0945»0955»0956»0966»0967»0975»0976»0994»0995»0997»0965»";
+
+if (strpos($globe, $prefix) !== false){
+    echo "0";
+} else if (strpos($smart, $prefix) !== false){
+    echo "1";
+} else if (strpos($sun, $prefix) !== false){
+    echo "2";
+} else {
+    echo "3"; //unknown
+}*/
+?>

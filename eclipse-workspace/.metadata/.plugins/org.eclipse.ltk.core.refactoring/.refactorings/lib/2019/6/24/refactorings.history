@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<session version="1.0">
+<refactoring comment="Rename resource &apos;lib/gcard/SignUp&apos; to &apos;SignUp.php&apos;" description="Rename resource &apos;SignUp&apos;" flags="7" id="org.eclipse.ltk.core.refactoring.rename.resource" input="gcard/SignUp" name="SignUp.php" stamp="1560323074002" updateReferences="true"/>
+</session>

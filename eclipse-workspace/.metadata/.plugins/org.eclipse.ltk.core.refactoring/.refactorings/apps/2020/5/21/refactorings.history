@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<session version="1.0">
+<refactoring comment="Move &apos;sca_approval.php&apos; to &apos;codeapproval&apos;" description="Move &apos;sca_approval.php&apos; to &apos;codeapproval&apos;" destination="integsys/codeapproval" element1="integsys/param/sca_approval.php" flags="7" id="org.eclipse.ltk.core.refactoring.move.resources" resources="1" stamp="1590213937986" updateReferences="true"/>
+</session>

@@ -1,0 +1,14 @@
+<?php 
+$json = array();
+
+$data = file_get_contents('php://input');
+$parjson = json_decode($data, true);
+
+if(is_null($parjson)){
+    $json["result"] = "error";
+    $json["error"]["message"] = "Invalid parameters detected...";
+    echo json_encode($json);
+    return false;
+}
+
+?>

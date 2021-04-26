@@ -1,0 +1,387 @@
+<?php
+    header('Content-Type: text/html; charset=utf-8');
+    
+    $sValue = "QlMwL29tQ3V0Z25mdEZDMG9RZGNpZz09";
+    $sEncrp = "378b579c1034488eb0871fa19399988bbb93b288e2b876b18da18ad8d7e11c8a";
+    echo CommonUtil::app_decrypt($sValue, $sEncrp);
+    
+    class CommonUtil{
+        public const format_date = "Y-m-d";
+        public const format_timestamp = "Y-m-d H:i:s";
+        public const format_longdate = "F j, Y";
+        public const format_longtimestamp = "F j, Y H:i:s";
+        
+        //::::::::::::::::::::::::::::::
+        //public static function HexToString($value)
+        //::::::::::::::::::::::::::::::
+        public static function HexToString($value){
+            if(trim($value) == "")
+                return $value;
+                
+                return pack("H*", $value);
+        }
+        
+        //::::::::::::::::::::::::::::::
+        //public static function StringToHex($value)
+        //::::::::::::::::::::::::::::::
+        public static function StringToHex($value){
+            if($value == "")
+                return $value;
+                
+                return bin2hex($value);
+        }
+        
+        //::::::::::::::::::::::::::::::
+        //public static function toSQL($value)
+        //::::::::::::::::::::::::::::::
+        //use in comparing the passwords
+        public static function toSQL($value){
+            switch(gettype($value)){
+                case "integer":
+                    return $value;
+                case "double":
+                    return $value;
+                case "NULL":
+                    return "NULL";
+                case "boolean":
+                    return $value;
+                default:
+                    return "'" . $value . "'";
+            }
+        }
+        
+        
+        //public static function DBEmpty($value)
+        //::::::::::::::::::::::::::::::
+        //use is setting the initial value of fields base on $type extracted from the database;
+        public static function DBEmpty($type){
+            switch($type){
+                case "DATETIME":
+                case "DATE":
+                    return null;
+                case "TINY":
+                CASE "LONG":
+                case "SHORT":
+                    return 0;
+                case "DECIMAL":
+                case "NEWDECIMAL":
+                    return 0.00;
+                default:
+                    return "";
+            }
+        }
+        
+        //::::::::::::::::::::::::::::::
+        //public static function GetNextCode($table, $field, $year, $conn, $branch="")
+        //::::::::::::::::::::::::::::::
+        //where $table=string(tablename)
+        //      $field=string(fieldname)
+        //		  $year=boolean(do we need to use year)
+        //		  $conn=connection object
+        //      $branch=string(branch code)
+        public static function GetNextCode($table, $field, $year, $conn, $branch=""){
+            $value="";
+            
+            if(trim($branch)<>"")
+                $value .= $branch;
+                
+                //use the date function of php since the app/web server and dbf server
+                //is installed in one pc...
+                if($year)
+                    $value .= substr(date("Y"), -2);
+                    
+                    //extract last row from the table
+                    $sql = "SELECT $field FROM $table" .
+                    " WHERE $field LIKE " . self::toSQL($value . "%") .
+                    " ORDER BY $field DESC LIMIT 1";
+                    $stmt = $conn->query($sql);
+                    
+                    //get meta info of the column to get the size of field
+                    $meta = $stmt->getColumnMeta(0); //$meta["len"]
+                    
+                    //get sizes for next transact no computation
+                    $ctr = 1;
+                    $remlen = $meta["len"] - strlen($value);
+                    
+                    if($row=$stmt->fetch()){
+                        $ctr = substr($row[$field], -1 * $remlen) + 1;
+                    }
+                    $value = $value . str_pad($ctr, $remlen, "0", STR_PAD_LEFT);
+                    
+                    return $value;
+        }
+        
+        //::::::::::::::::::::::::::::::
+        //public static function GetNextReference($table, $field, $order, $colfilter, $colvalue, $conn)
+        //::::::::::::::::::::::::::::::
+        //where $table=string(tablename)
+        //      $field=string(fieldname)
+        //		  $order=string(fieldname use in ordering the result)
+        //		  $colfilter=string(fieldname use in filtering the data to be use in getting the next reference)
+        //		  $colvalue=string(the value of the column to be used in filtering)
+        //		  $conn=connection object
+        public static function GetNextReference($table, $field, $order, $colfilter, $colvalue, $conn){
+            $sql = "SELECT $field FROM $table" .
+            " WHERE $colfilter LIKE " . self::toSQL($colvalue . "%") .
+            " ORDER BY $order DESC, $field DESC" .
+            " LIMIT 1";
+            $stmt = $conn->query($sql);
+            $meta = $stmt->getColumnMeta(0);
+            
+            $value = "0";
+            if($row = $stmt->fetch()){
+                $value = $row[$field];
+                $size = strlen($row[$field]);
+            }
+            else
+                $size = $meta["len"];
+                
+                $value += 1;
+                return str_pad($value, $size, "0", STR_PAD_LEFT);
+        }
+        
+        //::::::::::::::::::::::::::::::
+        //public static function validDate($date, $format = 'Y-m-d H:i:s')
+        //::::::::::::::::::::::::::::::
+        //kalyptus - 2017.11.07 02:25pm
+        //extracted from http://php.net/manual/en/function.checkdate.php
+        public static function validDate($date, $format = 'Y-m-d H:i:s')
+        {
+            $d = DateTime::createFromFormat($format, $date);
+            return $d && $d->format($format) == $date;
+        }
+        
+        
+        //::::::::::::::::::::::::::::::
+        //public static function isValidEmail($email)
+        //::::::::::::::::::::::::::::::
+        public static function isValidEmail($email){
+            return filter_var($email, FILTER_VALIDATE_EMAIL);
+        }
+        
+        //::::::::::::::::::::::::::::::
+        //public static function isValidMobile($mobile)
+        //::::::::::::::::::::::::::::::
+        public static function isValidMobile($mobile){
+            return preg_match('/^[0-9]{10}+$/', $mobile);
+        }
+        
+        //::::::::::::::::::::::::::::::
+        //public static function isValidTelephone($telno)
+        //::::::::::::::::::::::::::::::
+        public static function isValidTelephone($telno){
+            return preg_match('/^[0-9]{9}+$/', $telno);
+        }
+        
+        //::::::::::::::::::::::::::::::
+        //public static function addcondition($sql, $filter)
+        //::::::::::::::::::::::::::::::
+        public static function addcondition($sql, $filter){
+            $subs = self::gsplit(" UNION ", $sql);
+            $newsql = "";
+            $size = sizeof($subs);
+            
+            if($size == 0){
+                return $sql;
+            }
+            elseif($size == 1) {
+                return self::insertcondition($subs[0], $filter);
+            }
+            else{
+                $newsql = self::insertcondition($subs[0], $filter);
+                
+                for($ctr=1;$ctr<$size;$ctr++){
+                    $newsql .= " UNION " . self::insertcondition($subs[$ctr], $filter);
+                }
+                
+                return $newsql;
+            }
+        }
+        
+        //::::::::::::::::::::::::::::::
+        //public static function gsplit($pattern, $string)
+        //::::::::::::::::::::::::::::::
+        public static function gsplit($pattern, $string){
+            return preg_split("/$pattern/i", $string);
+        }
+        
+        //::::::::::::::::::::::::::::::
+        //public static function str_insert($str, $ins, $pos)
+        //::::::::::::::::::::::::::::::
+        public static function str_insert($str, $ins, $pos){
+            return substr($str, 0, $pos) . $ins . substr($str, $pos);
+        }
+        
+        //::::::::::::::::::::::::::::::
+        //public static function app_encrypt($value, $salt)
+        //::::::::::::::::::::::::::::::
+        public static function app_encrypt($value, $salt){
+            $method = "AES-256-CBC";
+            $iv = "0a6575be41b8e2b8";
+            $result = openssl_encrypt($value, $method, $salt, 0, $iv);
+            $result = base64_encode($result);
+            return $result;
+        }
+        
+        //::::::::::::::::::::::::::::::
+        //public static function app_decrypt($value, $salt)
+        //::::::::::::::::::::::::::::::
+        public static function app_decrypt($value, $salt){
+            $method = "AES-256-CBC";
+            $iv = "0a6575be41b8e2b8";
+            $value = base64_decode($value);
+            $result = openssl_decrypt($value, $method, $salt, 0, $iv);
+            return $result;
+        }
+        
+        private static function insertcondition($sql, $filter){
+            $subs = self::gsplit(" WHERE ", $sql);
+            $newsql = "";
+            $size = sizeof($subs);
+            
+            if($size == 0){
+                return $sql;
+            }
+            elseif($size == 1) {
+                return self::insertwhere($subs[0], $filter);
+            }
+            else{
+                $newsql = $subs[0];
+                for($ctr=1;$ctr<$size;$ctr++){
+                    $newsql .= " WHERE " . self::addwhere($subs[$ctr], $filter);
+                }
+                return $newsql;
+            }
+        }
+        
+        private static function addwhere($sql, $filter){
+            if($pos = stripos($sql, " GROUP BY ")){
+                return self::str_insert($sql, " AND ($filter)", $pos);
+            }
+            elseif($pos = stripos($sql, " HAVING ")){
+                return self::str_insert($sql, " AND ($filter)", $pos);
+            }
+            elseif($pos = stripos($sql, " ORDER BY ")){
+                return self::str_insert($sql, " AND ($filter)", $pos);
+            }
+            elseif($pos = stripos($sql, " LIMIT ")){
+                return self::str_insert($sql, " AND ($filter)", $pos);
+            }
+            else{
+                return $sql . " AND ($filter)";
+            }
+        }
+        
+        private static function insertwhere($sql, $filter){
+            if($pos = stripos($sql, " GROUP BY ")){
+                return self::str_insert($sql, " WHERE ($filter)", $pos);
+            }
+            elseif($pos = stripos($sql, " HAVING ")){
+                return self::str_insert($sql, " WHERE ($filter)", $pos);
+            }
+            elseif($pos = stripos($sql, " ORDER BY ")){
+                return self::str_insert($sql, " WHERE ($filter)", $pos);
+            }
+            elseif($pos = stripos($sql, " LIMIT ")){
+                return self::str_insert($sql, " WHERE ($filter)", $pos);
+            }
+            else{
+                return $sql . " WHERE ($filter)";
+            }
+        }
+        
+        public static function is_hex($hex_code) {
+            return @preg_match("/^[a-f0-9]{2,}$/i", $hex_code) && !(strlen($hex_code) & 1);
+        }
+        
+        public static function Hex2String($hex){
+            if (self::is_hex($hex))
+                return pack("H*", $hex);
+                else
+                    return $hex;
+        }
+    }
+    
+    class Crypto
+    {
+        private const _signature = "Beyond the boundary of imagination, what";
+        
+        public static function Encrypt($data_str, $key_str=""){
+            //Make sure we have something to encrypt;
+            if($data_str == "")
+                return "";
+                
+                if($key_str=="")
+                    $key_str = Crypto::_signature;
+                    
+                    return Crypto::rc4($key_str, $data_str);
+        }
+        
+        public static function Decrypt($data_str, $key_str=""){
+            //Make sure we have something to encrypt;
+            if($data_str == "")
+                return "";
+                
+                if($key_str=="")
+                    $key_str = Crypto::_signature;
+                    
+                    
+                    return Crypto::rc4($key_str, $data_str);
+        }
+        
+        private static function rc4( $key_str, $data_str ) {
+            // convert input string(s) to array(s)
+            $key = array();
+            $data = array();
+            for ( $i = 0; $i < strlen($key_str); $i++ ) {
+                $key[] = ord($key_str{$i});
+            }
+            for ( $i = 0; $i < strlen($data_str); $i++ ) {
+                $data[] = ord($data_str{$i});
+            }
+            // prepare key
+            $state = array( 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,
+                16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,
+                32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,
+                48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,
+                64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,
+                80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,
+                96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,
+                112,113,114,115,116,117,118,119,120,121,122,123,124,125,126,127,
+                128,129,130,131,132,133,134,135,136,137,138,139,140,141,142,143,
+                144,145,146,147,148,149,150,151,152,153,154,155,156,157,158,159,
+                160,161,162,163,164,165,166,167,168,169,170,171,172,173,174,175,
+                176,177,178,179,180,181,182,183,184,185,186,187,188,189,190,191,
+                192,193,194,195,196,197,198,199,200,201,202,203,204,205,206,207,
+                208,209,210,211,212,213,214,215,216,217,218,219,220,221,222,223,
+                224,225,226,227,228,229,230,231,232,233,234,235,236,237,238,239,
+                240,241,242,243,244,245,246,247,248,249,250,251,252,253,254,255 );
+            $len = count($key);
+            $index1 = $index2 = 0;
+            for( $counter = 0; $counter < 256; $counter++ ){
+                $index2   = ( $key[$index1] + $state[$counter] + $index2 ) % 256;
+                $tmp = $state[$counter];
+                $state[$counter] = $state[$index2];
+                $state[$index2] = $tmp;
+                $index1 = ($index1 + 1) % $len;
+            }
+            // rc4
+            $len = count($data);
+            $x = $y = 0;
+            for ($counter = 0; $counter < $len; $counter++) {
+                $x = ($x + 1) % 256;
+                $y = ($state[$x] + $y) % 256;
+                $tmp = $state[$x];
+                $state[$x] = $state[$y];
+                $state[$y] = $tmp;
+                $data[$counter] ^= $state[($state[$x] + $state[$y]) % 256];
+            }
+            // convert output back to a string
+            $data_str = "";
+            for ( $i = 0; $i < $len; $i++ ) {
+                $data_str .= chr($data[$i]);
+            }
+            return $data_str;
+        }
+    }
+?>

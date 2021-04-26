@@ -1,0 +1,30 @@
+<?php
+    //header('Content-Type: text/html; charset=utf-8');
+    //$sql = utf8_encode("dela peña");
+    //echo $sql; 
+    //echo "--->";
+    //$sql = utf8_decode($sql);
+    //echo $sql; 
+    
+    //echo utf8_decode("ÃƒÂ±");
+    
+    //echo "ÃƒÂ±";
+    
+    
+    //echo utf8_encode("Custodio, Ian Marlowe Añonuevo");
+    //URLEncoder.encode(input, "UTF-8");
+    
+    $str = "Arcon, Marvin Acompañado";
+    $str =  utf8_encode($str);
+    echo $str;
+    $str =  utf8_decode("Arcon, Marvin AcompaÃ±ado");
+    echo $str;
+
+    //echo mb_detect_encoding("Arcon, Marvin AcompaÃ±ado", "auto");
+    //echo mb_detect_encoding("Arcon, Marvin AcompaÃ±ado", "auto");
+    
+    //echo utf8_decode("Ã±");
+    
+    //Arcon, Marvin AcompaÃÂ±ado
+    //QueÃƒÂ±ano, Asterio Jr Garcia
+?>
